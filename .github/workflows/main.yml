@@ -57,7 +57,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}      
-      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=erickvieira_calculadora org.jacoco:jacoco-maven-plugin:prepare-agent -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml 
+      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=ErickIV_Calculadora_Java org.jacoco:jacoco-maven-plugin:prepare-agent -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml 
                 
   build-prd:
     runs-on: ubuntu-latest
