@@ -1,30 +1,87 @@
-name: Maven Package
+name: Integração contínua de Java com Maven
 
 on:
-  release:
-    types: [created]
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  build-dev:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
+    environment: 
+      name: dev
+    name: build-dev - Teste com JDK 18
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 11
+    - name: Realiza o checkout do repositório
+      uses: actions/checkout@v3
+    - name: Configura o JDK 18
       uses: actions/setup-java@v3
       with:
-        java-version: '11'
+        java-version: '18'
         distribution: 'temurin'
-        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
-        settings-path: ${{ github.workspace }} # location for the settings.xml file
-
-    - name: Build with Maven
-      run: mvn -B package --file pom.xml
-
-    - name: Publish to GitHub Packages Apache Maven
-      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml
+        cache: maven
+    - name: Compila o projeto com Maven
+      run: mvn -B test --file pom.xml
+  
+  build-hmg:
+    runs-on: ubuntu-latest
+    environment: 
+      name: hmg
+    name: build-hmg - Análise do código
+    needs: build-dev
+    steps:
+    - name: Realiza o checkout do repositório
+      uses: actions/checkout@v3 
+      with:
+        fetch-depth: 0 
+    - name: Configura o JDK 18
+      uses: actions/setup-java@v3      
+      with:
+        java-version: '18'
+        distribution: 'temurin'
+        cache: maven
+    - name: Cache dos pacotes do SonarCloud
+      uses: actions/cache@v3
+      with:
+        path: ~/.sonar/cache
+        key: ${{ runner.os }}-sonar
+        restore-keys: ${{ runner.os }}-sonar
+    - name: Cache dos pacotes do Maven
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+    - name: Verifica o projeto com Maven e Jacoco
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}      
+      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=ErickIV_Calculadora_Java org.jacoco:jacoco-maven-plugin:prepare-agent -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml 
+                
+  build-prd:
+    runs-on: ubuntu-latest
+    environment: 
+      name: prd
+    name: build-prd - Empacotamento
+    needs: build-hmg
+    steps:
+    - name: Realiza o checkout do repositório
+      uses: actions/checkout@v3
+    - name: Configura o JDK 18
+      uses: actions/setup-java@v3
+      with:
+        java-version: '18'
+        distribution: 'temurin'
+        cache: maven
+    - name: Empacota o projeto com Maven      
+      run: mvn -B package --file pom.xml -DskipTests
+    - name: Crie uma pasta temporária(staging) de downloads de artefatos
+      run: mkdir staging
+    - name: Copia os artefatos a serem publicados na pasta temporária(staging)
+      run: cp target/*jar-with-dependencies.jar staging
+    - name: Usa Upload Artifact do GitHub Action
+      uses: actions/upload-artifact@v3
+      with:
+        name: Package-${{ runner.os }} #.zip será adicionado automaticamente
+        path: staging
