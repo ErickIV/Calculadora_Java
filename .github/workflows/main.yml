@@ -7,78 +7,24 @@ on:
     branches: [ main ]
 
 jobs:
-  build-dev:
+  build:
     runs-on: ubuntu-latest
-    environment: 
-      name: dev
+
     steps:
-    - name: Realiza o checkout do repositório
+    - name: Checkout do repositório
       uses: actions/checkout@v3
+
     - name: Configura o JDK 18
       uses: actions/setup-java@v3
       with:
         java-version: '18'
         distribution: 'temurin'
         cache: maven
-    - name: Compila o projeto com Maven
-      run: mvn -B test --file pom.xml
-  
-  build-hmg:
-    runs-on: ubuntu-latest
-    environment: 
-      name: hmg
-    needs: build-dev
-    steps:
-    - name: Realiza o checkout do repositório
-      uses: actions/checkout@v3 
-      with:
-        fetch-depth: 0 
-    - name: Configura o JDK 18
-      uses: actions/setup-java@v3      
-      with:
-        java-version: '18'
-        distribution: 'temurin'
-        cache: maven
-    - name: Cache dos pacotes do SonarCloud
-      uses: actions/cache@v3
-      with:
-        path: ~/.sonar/cache
-        key: ${{ runner.os }}-sonar
-        restore-keys: ${{ runner.os }}-sonar
-    - name: Cache dos pacotes do Maven
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-    - name: Verifica o projeto com Maven e Jacoco
+
+    - name: Compilar e testar com Maven
+      run: mvn -B clean verify -Pcoverage --file pom.xml
+
+    - name: Executar análise SonarCloud
+      uses: SonarSource/sonarcloud-github-action@master
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}      
-      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=ErickIV_Calculadora_Java org.jacoco:jacoco-maven-plugin:prepare-agent -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml 
-                
-  build-prd:
-    runs-on: ubuntu-latest
-    environment: 
-      name: prd
-    needs: build-hmg
-    steps:
-    - name: Realiza o checkout do repositório
-      uses: actions/checkout@v3
-    - name: Configura o JDK 18
-      uses: actions/setup-java@v3
-      with:
-        java-version: '18'
-        distribution: 'temurin'
-        cache: maven
-    - name: Empacota o projeto com Maven      
-      run: mvn -B package --file pom.xml -DskipTests
-    - name: Crie uma pasta temporária(staging) de downloads de artefatos
-      run: mkdir staging
-    - name: Copia os artefatos a serem publicados na pasta temporária(staging)
-      run: cp target/*jar-with-dependencies.jar staging
-    - name: Usa Upload Artifact do GitHub Action
-      uses: actions/upload-artifact@v3
-      with:
-        name: Package-${{ runner.os }} #.zip será adicionado automaticamente
-        path: staging
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
