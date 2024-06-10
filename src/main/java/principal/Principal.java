@@ -1,11 +1,10 @@
 package principal;
+
 import javax.swing.JOptionPane;
 import calculadora.Calculadora;
 
 public class Principal {
-
     public static void main(String[] args) {
-
         String opcao = "";
         Calculadora calculadora = new Calculadora();
         while (!opcao.equals("9")) {
@@ -26,11 +25,7 @@ public class Principal {
                         JOptionPane.showMessageDialog(null, "Produto: " + calculadora.getProduto());
                         break;
                     case 5:
-                        try {
-                            JOptionPane.showMessageDialog(null, "Quociente: " + calculadora.getQuociente());
-                        } catch (ArithmeticException e) {
-                            JOptionPane.showMessageDialog(null, "Erro: Divisão por zero não é permitida.");
-                        }
+                        exibirQuociente(calculadora);
                         break;
                     case 9: 
                         JOptionPane.showMessageDialog(null, "Saindo do sistema.");
@@ -42,6 +37,14 @@ public class Principal {
             } catch (NumberFormatException e) {
                 JOptionPane.showMessageDialog(null, "Entrada inválida! Por favor, digite um número.");
             }
+        }
+    }
+
+    private static void exibirQuociente(Calculadora calculadora) {
+        try {
+            JOptionPane.showMessageDialog(null, "Quociente: " + calculadora.getQuociente());
+        } catch (ArithmeticException e) {
+            JOptionPane.showMessageDialog(null, "Erro: Divisão por zero não é permitida.");
         }
     }
 }
